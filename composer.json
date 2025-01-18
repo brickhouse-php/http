@@ -20,13 +20,9 @@
     ],
     "require": {
         "php": "^8.4",
+        "amphp/socket": "^2.3",
         "brickhouse/channel": "dev-main",
-        "brickhouse/config": "dev-main",
-        "brickhouse/core": "dev-main",
-        "brickhouse/log": "dev-main",
-        "brickhouse/routing": "dev-main",
-        "brickhouse/view": "dev-main",
-        "amphp/socket": "^2.3"
+        "brickhouse/core": "dev-main"
     },
     "autoload": {
         "psr-4": {
