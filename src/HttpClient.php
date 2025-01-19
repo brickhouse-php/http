@@ -2,13 +2,8 @@
 
 namespace Brickhouse\Http;
 
-use Amp\Socket\ClientTlsContext;
-use Amp\Socket\ConnectContext;
-use Brickhouse\Http\Transport\HttpRequestTransport;
-use Brickhouse\Http\Transport\HttpResponseTransport;
+use GuzzleHttp\RequestOptions;
 use League\Uri\Uri;
-
-use function Amp\Socket\{connect, connectTls};
 
 class HttpClient
 {
@@ -328,58 +323,26 @@ class HttpClient
             $request->headers->set("host", $request->uri()->getHost());
         }
 
-        $connectContext = $this->createConnectContext($request);
-
-        $host = $request->uri()->getHost();
-        $port = $request->uri()->getPort();
-
-        if ($port === null) {
-            $port = $connectContext->getTlsContext() !== null ? 443 : 80;
+        $body = '';
+        while (($chunk = $request->content()->read()) !== null) {
+            $body .= $chunk;
         }
 
-        $uri = $host . ":" . $port;
+        $client = new \GuzzleHttp\Client([
+            'timeout' => $this->timeout,
+        ]);
 
-        $socket =
-            $connectContext->getTlsContext() !== null
-                ? connectTls($uri, $connectContext)
-                : connect($uri, $connectContext);
+        $guzzleResponse = $client->request(
+            $request->method(),
+            $request->uri()->toString(),
+            [
+                RequestOptions::HEADERS => $request->headers->all(),
+                RequestOptions::BODY => $body,
+                RequestOptions::VERSION => $request->protocol(),
+                RequestOptions::SYNCHRONOUS => true,
+            ]
+        );
 
-        $transmitTransport = resolve(HttpRequestTransport::class);
-        $receiveTransport = resolve(HttpResponseTransport::class);
-
-        try {
-            $transmitTransport->send($request, $socket);
-
-            return $receiveTransport->receive($socket);
-        } catch (\Throwable $e) {
-            throw $e;
-        } finally {
-            $socket->end();
-        }
-    }
-
-    /**
-     * Create a `ConnectContext` from the given request instance.
-     *
-     * @param Request $request
-     *
-     * @return ConnectContext
-     */
-    protected function createConnectContext(Request $request): ConnectContext
-    {
-        $connectContext = new ConnectContext();
-
-        if ($this->nodelay) {
-            $connectContext->withTcpNoDelay();
-        } else {
-            $connectContext->withoutTcpNoDelay();
-        }
-
-        if ($request->scheme() === "https") {
-            $host = $request->host() ?? "";
-            $connectContext->withTlsContext(new ClientTlsContext($host));
-        }
-
-        return $connectContext;
+        return Response::psr7($guzzleResponse);
     }
 }

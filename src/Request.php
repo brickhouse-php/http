@@ -5,6 +5,7 @@ namespace Brickhouse\Http;
 use Amp\ByteStream\ReadableBuffer;
 use Amp\ByteStream\ReadableStream;
 use League\Uri\Uri;
+use Psr\Http\Message\ServerRequestInterface;
 
 class Request extends HttpMessage
 {
@@ -74,6 +75,25 @@ class Request extends HttpMessage
     public static function current(): Request
     {
         return self::$current;
+    }
+
+    /**
+     * Creates a new `Request`-instance from the given PSR-7 request interface.
+     *
+     * @param ServerRequestInterface $request
+     *
+     * @return Request
+     */
+    public static function psr7(ServerRequestInterface $request): Request
+    {
+        return new Request(
+            method: $request->getMethod(),
+            uri: \League\Uri\Uri::fromBaseUri($request->getUri()->__toString()),
+            headers: HttpHeaderBag::parseArray($request->getHeaders()),
+            body: $request->getBody(),
+            contentLength: $request->getBody()->getSize(),
+            protocol: $request->getProtocolVersion(),
+        );
     }
 
     /**

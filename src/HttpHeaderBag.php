@@ -47,6 +47,26 @@ class HttpHeaderBag
     }
 
     /**
+     * Parses an array of header names and values into an `HttpHeaderBag`.
+     *
+     * @param array<string,list<string>>    $headers
+     *
+     * @return HttpHeaderBag
+     */
+    public static function parseArray(array $headers): HttpHeaderBag
+    {
+        $bag = static::empty();
+
+        foreach ($headers as $name => $values) {
+            foreach ($values as $value) {
+                $bag->add($name, $value);
+            }
+        }
+
+        return $bag;
+    }
+
+    /**
      * Gets all the headers in the header bag.
      *
      * @return array<string,string>

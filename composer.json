@@ -8,7 +8,7 @@
         "issues": "https://github.com/brickhouse-php/brickhouse/issues",
         "source": "https://github.com/brickhouse-php/brickhouse"
     },
-    "minimum-stability": "stable",
+    "minimum-stability": "dev",
     "prefer-stable": true,
     "authors": [
         {
@@ -22,7 +22,9 @@
         "php": "^8.4",
         "amphp/socket": "^2.3",
         "brickhouse/channel": "dev-main",
-        "brickhouse/core": "dev-main"
+        "brickhouse/core": "dev-main",
+        "laminas/laminas-diactoros": "^3.5",
+        "guzzlehttp/guzzle": "^7.9"
     },
     "autoload": {
         "psr-4": {

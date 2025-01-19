@@ -6,10 +6,10 @@ use Amp\ByteStream\ReadableBuffer;
 use Amp\ByteStream\ReadableStream;
 use Brickhouse\Http\Responses\NotFound;
 use Brickhouse\Support\Arrayable;
-use Brickhouse\Support\Collection;
 use Brickhouse\View\Engine\Exceptions\ViewNotFoundException;
 use Brickhouse\View\View;
 use JsonSerializable;
+use Psr\Http\Message\ResponseInterface;
 
 class Response extends HttpMessage
 {
@@ -37,6 +37,7 @@ class Response extends HttpMessage
     public function __construct(
         int $status = HttpStatus::OK,
         ?HttpHeaderBag $headers = null,
+        null|ReadableStream|string $body = null,
         ?int $contentLength = null,
         string $protocol = "1.1",
     ) {
@@ -44,6 +45,10 @@ class Response extends HttpMessage
 
         $this->status = $status;
         $this->body = new ReadableBuffer();
+
+        if ($body !== null) {
+            $this->setContent($body);
+        }
     }
 
     /**
@@ -137,22 +142,6 @@ class Response extends HttpMessage
     }
 
     /**
-     * Creates a new streaming `Response` instance with the given content generator.
-     *
-     * @param \Closure():\Generator     $generator
-     *
-     * @return Response
-     */
-    public static function stream(\Closure $generator, string $contentType = ContentType::BIN): Response
-    {
-        $response = new StreamedResponse($generator);
-        $response->headers->set('Transfer-Encoding', 'chunked');
-        $response->setContentType($contentType);
-
-        return $response;
-    }
-
-    /**
      * Creates a new `Response`-object which contains the rendered view, `$alias`, depending on the request view format.
      *
      * @param string                    $alias      Defines the alias of the view to render.
@@ -205,6 +194,24 @@ class Response extends HttpMessage
     }
 
     /**
+     * Creates a new `Response`-instance from the given PSR-7 response interface.
+     *
+     * @param ResponseInterface $response
+     *
+     * @return Response
+     */
+    public static function psr7(ResponseInterface $response): Response
+    {
+        return new Response(
+            status: $response->getStatusCode(),
+            headers: HttpHeaderBag::parseArray($response->getHeaders()),
+            body: $response->getBody(),
+            contentLength: $response->getBody()->getSize(),
+            protocol: $response->getProtocolVersion(),
+        );
+    }
+
+    /**
      * Sets the `Content-Type` header on the response.
      *
      * @param string    $type
@@ -245,6 +252,7 @@ class Response extends HttpMessage
 
         $this->body = new ReadableBuffer($body);
         $this->headers->set("content-length", (string) \strlen($body));
+        $this->contentLength = \strlen($body);
 
         return $this;
     }

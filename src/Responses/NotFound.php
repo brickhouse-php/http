@@ -2,7 +2,7 @@
 
 namespace Brickhouse\Http\Responses;
 
-use Amp\Http\HttpStatus;
+use Brickhouse\Http\HttpStatus;
 use Brickhouse\Http\Response;
 
 final class NotFound extends Response

@@ -3,24 +3,9 @@
 namespace Brickhouse\Http;
 
 use Brickhouse\Core\Kernel;
-use Brickhouse\Http\Server\SocketServer;
 
 class HttpKernel implements Kernel
 {
-    /**
-     * Gets or sets the hostname to use for the HTTP server.
-     *
-     * @var string
-     */
-    protected string $hostname = "127.0.0.1";
-
-    /**
-     * Gets or sets the port to use for the HTTP server.
-     *
-     * @var integer
-     */
-    protected int $port = 8000;
-
     public function __construct(protected readonly Router $router)
     {
         $this->router->addApplicationRoutes();
@@ -28,51 +13,57 @@ class HttpKernel implements Kernel
 
     public function invoke(array $args = [])
     {
-        $endpoint = $this->resolveAddress($args);
+        $requestFactory = resolve(RequestFactory::class);
+        $request = $requestFactory->create();
 
-        $server = resolve(SocketServer::class);
-        $server->expose($endpoint);
-        $server->serve();
+        $response = $this->handle($request);
 
-        // Serve requests until SIGINT or SIGTERM is received by the process.
-        $code = \Amp\trapSignal([SIGINT, SIGTERM]);
-
-        $server->terminate();
-
-        return $code === SIGINT ? 0 : $code;
+        $this->sendResponse($response);
     }
 
     /**
-     * Attempt to resolve the address to expose the HTTP server on, from the given arguments.
-     * The hostname is parsed from the `hostname` key, while the port is parsed from the `port` key in the array.
+     * Sends the given response back to the client using PHP's internal HTTP functions.
      *
-     * @param array{'hostname'?: string,'port'?: int}   $args
+     * @param Response $response
      *
-     * @return string
+     * @return void
      */
-    protected function resolveAddress(array $args): string
+    protected function sendResponse(Response $response): void
     {
-        $hostname = $args["hostname"] ?? "127.0.0.1";
-        if (!is_string($hostname)) {
-            throw new \InvalidArgumentException("Invalid hostname given to HTTP kernel: '{$hostname}'");
+        // Start the output buffering so that all output will be saved
+        // to it instead of printing to console.
+        ob_start();
+
+        if (!headers_sent()) {
+            // Send the status code first.
+            http_response_code($response->status);
+
+            // Then send all the headers.
+            foreach ($response->headers->all() as $header => $value) {
+                header($header . ': ' . $value);
+            }
         }
 
-        $port = $args["port"] ?? 8000;
-        if (!is_int($port)) {
-            throw new \InvalidArgumentException("Invalid port given to HTTP kernel: '{$port}'");
-        }
+        // Flush all the headers out to the buffer.
+        ob_flush();
 
-        if ($port > 65535 || $port <= 0) {
-            throw new \InvalidArgumentException(
-                "Invalid port given to HTTP kernel: port must be between 1-65535; given {$port}."
-            );
+        // Write the response to the output buffer.
+        while (($chunk = $response->content()->read()) !== null) {
+            echo $chunk;
         }
+        ob_flush();
 
-        return $hostname . ":" . $port;
+        // Flush the buffer and stop the output buffering again.
+        ob_end_flush();
+
+        // If we're running FastCGI - as opposed to CLI - let it know the request is done.
+        if (function_exists('fastcgi_finish_request')) {
+            fastcgi_finish_request();
+        }
     }
 
     /**
-     * Handle and respond to incoming HTTP requests.
+     * Sends the given request through the HTTP pipeline and produces an HTTP response.
      *
      * @param Request $request
      *
