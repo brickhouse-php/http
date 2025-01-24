@@ -4,6 +4,7 @@ namespace Brickhouse\Http;
 
 use Amp\ByteStream\ReadableBuffer;
 use Amp\ByteStream\ReadableStream;
+use Brickhouse\Http\AcceptHeaderItem;
 use League\Uri\Uri;
 use Psr\Http\Message\ServerRequestInterface;
 
@@ -31,7 +32,7 @@ class Request extends HttpMessage
     public Route $route;
 
     /**
-     * Gets the format requested in the request.
+     * Gets the formats requested in the request.
      *
      * @var string
      */

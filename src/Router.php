@@ -158,8 +158,8 @@ class Router
         /** @var Route $route */
         [$route, $parameters] = $match;
 
-        $request->format = $request->headers->contentType() ?? ContentType::HTML;
         $request->parameters = [...$request->parameters, ...$parameters, ...$request->bindings()];
+        $request->format = $this->resolveRequestFormat($request);
 
         $binding = $this->resolveController($route, $request);
         $result = $this->application->call($binding, $route->callback, $request->parameters);
@@ -186,6 +186,38 @@ class Router
 
         // Transform the result into a serializable format to respond with.
         return $this->transformResponse($result);
+    }
+
+    /**
+     * Attempts to determine which format was requested in the given request.
+     *
+     * @param Request $request
+     *
+     * @return string
+     */
+    private function resolveRequestFormat(Request $request): string
+    {
+        if (isset($request->parameters['format'])) {
+            return match (strtolower($request->parameters['format'])) {
+                '.csv' => ContentType::CSV,
+                '.json' => ContentType::JSON,
+                '.jsonld' => ContentType::JSONLD,
+                '.html' => ContentType::HTML,
+                '.php' => ContentType::PHP,
+                '.xml' => ContentType::XML,
+                default => ContentType::HTML,
+            };
+        }
+
+        $acceptBag = $request->headers->accept();
+
+        // Gets the highest priority content type in the `Accept`-header.
+        if ($acceptBag !== null && ($first = $acceptBag->first()) !== null) {
+            return $first->format;
+        }
+
+        // If nothing else is found, default to HTML.
+        return ContentType::HTML;
     }
 
     /**
@@ -337,6 +369,7 @@ class Router
      * @param string                $uri
      * @param callable|string       $callback
      * @param null|string           $action
+     * @param bool                  $skipFormat
      *
      * @return Route
      */
@@ -345,10 +378,22 @@ class Router
         string $uri,
         callable|string $callback,
         null|string $action = null,
+        bool $skipFormat = false,
     ): Route {
         $router = resolve(self::class);
 
+        if (!$skipFormat) {
+            $uri = rtrim($uri, '/') . ':?format';
+        }
+
         $route = $router->createRoute($methods, $uri, $callback, $action);
+        if (!$skipFormat) {
+            $route->constraints([
+                ...$route->constraints,
+                'format' => '\.\w+',
+            ]);
+        }
+
         $router->routeResolver->addRoute($route);
 
         return $route;
@@ -359,12 +404,13 @@ class Router
      *
      * @param callable|string       $callback
      * @param null|string           $action
+     * @param bool                  $skipFormat
      *
      * @return Route
      */
-    public static function root(callable|string $callback, null|string $action = null): Route
+    public static function root(callable|string $callback, null|string $action = null, bool $skipFormat = false): Route
     {
-        return self::get("", $callback, $action);
+        return self::get("", $callback, $action, $skipFormat);
     }
 
     /**
@@ -373,6 +419,7 @@ class Router
      * @param string                $uri
      * @param callable|string       $callback
      * @param null|string           $action
+     * @param bool                  $skipFormat
      *
      * @return Route
      */
@@ -380,8 +427,9 @@ class Router
         string $uri,
         callable|string $callback,
         null|string $action = null,
+        bool $skipFormat = false,
     ): Route {
-        return self::route("*", $uri, $callback, $action);
+        return self::route("*", $uri, $callback, $action, $skipFormat);
     }
 
     /**
@@ -390,6 +438,7 @@ class Router
      * @param string                $uri
      * @param callable|string       $callback
      * @param null|string           $action
+     * @param bool                  $skipFormat
      *
      * @return Route
      */
@@ -397,8 +446,9 @@ class Router
         string $uri,
         callable|string $callback,
         null|string $action = null,
+        bool $skipFormat = false,
     ): Route {
-        return self::route("GET", $uri, $callback, $action);
+        return self::route("GET", $uri, $callback, $action, $skipFormat);
     }
 
     /**
@@ -407,6 +457,7 @@ class Router
      * @param string                $uri
      * @param callable|string       $callback
      * @param null|string           $action
+     * @param bool                  $skipFormat
      *
      * @return Route
      */
@@ -414,8 +465,9 @@ class Router
         string $uri,
         callable|string $callback,
         null|string $action = null,
+        bool $skipFormat = false,
     ): Route {
-        return self::route("POST", $uri, $callback, $action);
+        return self::route("POST", $uri, $callback, $action, $skipFormat);
     }
 
     /**
@@ -424,6 +476,7 @@ class Router
      * @param string                $uri
      * @param callable|string       $callback
      * @param null|string           $action
+     * @param bool                  $skipFormat
      *
      * @return Route
      */
@@ -431,8 +484,9 @@ class Router
         string $uri,
         callable|string $callback,
         null|string $action = null,
+        bool $skipFormat = false,
     ): Route {
-        return self::route("PUT", $uri, $callback, $action);
+        return self::route("PUT", $uri, $callback, $action, $skipFormat);
     }
 
     /**
@@ -441,6 +495,7 @@ class Router
      * @param string                $uri
      * @param callable|string       $callback
      * @param null|string           $action
+     * @param bool                  $skipFormat
      *
      * @return Route
      */
@@ -448,8 +503,9 @@ class Router
         string $uri,
         callable|string $callback,
         null|string $action = null,
+        bool $skipFormat = false,
     ): Route {
-        return self::route("PATCH", $uri, $callback, $action);
+        return self::route("PATCH", $uri, $callback, $action, $skipFormat);
     }
 
     /**
@@ -458,6 +514,7 @@ class Router
      * @param string                $uri
      * @param callable|string       $callback
      * @param null|string           $action
+     * @param bool                  $skipFormat
      *
      * @return Route
      */
@@ -465,8 +522,9 @@ class Router
         string $uri,
         callable|string $callback,
         null|string $action = null,
+        bool $skipFormat = false,
     ): Route {
-        return self::route("DELETE", $uri, $callback, $action);
+        return self::route("DELETE", $uri, $callback, $action, $skipFormat);
     }
 
     /**
@@ -475,6 +533,7 @@ class Router
      * @param string                $uri
      * @param callable|string       $callback
      * @param null|string           $action
+     * @param bool                  $skipFormat
      *
      * @return Route
      */
@@ -482,8 +541,9 @@ class Router
         string $uri,
         callable|string $callback,
         null|string $action = null,
+        bool $skipFormat = false,
     ): Route {
-        return self::route("OPTIONS", $uri, $callback, $action);
+        return self::route("OPTIONS", $uri, $callback, $action, $skipFormat);
     }
 
     /**
@@ -535,7 +595,7 @@ class Router
 
             if (method_exists($controller, "new")) {
                 $path = $names["new"] ?? "new";
-                Router::get("/{$path}", $controller, "new");
+                Router::get("/{$path}", $controller, "new", skipFormat: true);
             }
 
             if (method_exists($controller, "create")) {
@@ -548,7 +608,7 @@ class Router
 
             if (method_exists($controller, "edit")) {
                 $path = $names["edit"] ?? "edit";
-                Router::get("/:id/{$path}", $controller, "edit");
+                Router::get("/:id/{$path}", $controller, "edit", skipFormat: true);
             }
 
             if (method_exists($controller, "update")) {

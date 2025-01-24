@@ -218,11 +218,15 @@ class HttpHeaderBag
     /**
      * Gets the `Accept` header value, if it exists.
      *
-     * @return ?string
+     * @return ?AcceptBag
      */
-    public function accept(): ?string
+    public function accept(): ?AcceptBag
     {
-        return $this->get('accept');
+        if (($accept = $this->get('accept')) !== null) {
+            return AcceptBag::parse($accept);
+        }
+
+        return null;
     }
 
     /**
