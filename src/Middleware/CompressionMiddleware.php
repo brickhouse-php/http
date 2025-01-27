@@ -33,15 +33,15 @@ readonly class CompressionMiddleware implements HttpMiddleware
 
         // Read the uncompressed content from the response.
         $content = "";
-        while (($chunk = $response->content()->read()) !== null) {
-            $content .= $chunk;
+        while (!$response->body->eof()) {
+            $content .= $response->body->read(1024);
         }
 
         // Get the applicable encoding callback and compress the body content.
         $encodingCallback = self::SUPPORTED[$selectedEncoding];
         $encoded = $this->{$encodingCallback}($content);
 
-        $response->setContent($encoded);
+        $response->setBody($encoded);
         $response->headers->set('Content-Encoding', $selectedEncoding);
 
         return $response;

@@ -5,6 +5,7 @@ namespace Brickhouse\Http;
 use Brickhouse\Core\Application;
 use Brickhouse\Http\Contracts\RouteResolver;
 use Brickhouse\Http\Responses\NotFound;
+use Brickhouse\Http\Transport\ContentType;
 use Brickhouse\Routing\Dispatcher;
 use Brickhouse\Routing\RouteCollector;
 use Brickhouse\Support\Arrayable;
@@ -158,7 +159,7 @@ class Router
         /** @var Route $route */
         [$route, $parameters] = $match;
 
-        $request->parameters = [...$request->parameters, ...$parameters, ...$request->bindings()];
+        $request->parameters = [...$request->parameters, ...$parameters];
         $request->format = $this->resolveRequestFormat($request);
 
         $binding = $this->resolveController($route, $request);
@@ -182,7 +183,7 @@ class Router
         }
 
         $binding = $this->resolveController($this->fallbackRoute, $request);
-        $result = $this->application->call($binding, $this->fallbackRoute->callback, $request->bindings());
+        $result = $this->application->call($binding, $this->fallbackRoute->callback, $request->parameters);
 
         // Transform the result into a serializable format to respond with.
         return $this->transformResponse($result);

@@ -1,6 +1,6 @@
 <?php
 
-use Brickhouse\Http\ContentType;
+use Brickhouse\Http\Transport\ContentType;
 use Brickhouse\Http\Request;
 use Brickhouse\Http\Response;
 

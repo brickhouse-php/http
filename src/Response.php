@@ -2,31 +2,22 @@
 
 namespace Brickhouse\Http;
 
-use Amp\ByteStream\ReadableBuffer;
-use Amp\ByteStream\ReadableStream;
 use Brickhouse\Http\Responses\NotFound;
+use Brickhouse\Http\Transport\ContentType;
+use Brickhouse\Http\Transport\HeaderBag;
+use Brickhouse\Http\Transport\Status;
 use Brickhouse\Support\Arrayable;
 use Brickhouse\View\Engine\Exceptions\ViewNotFoundException;
 use Brickhouse\View\View;
-use JsonSerializable;
 use Psr\Http\Message\ResponseInterface;
 
-class Response extends HttpMessage
+/**
+ * Defines a standard, client-bound HTTP response.
+ *
+ * @phpstan-type StreamGenerator    callable():\Generator<string, void, void, void>
+ */
+class Response extends \Brickhouse\Http\Transport\Response
 {
-    /**
-     * Gets or sets the HTTP status code of the response.
-     *
-     * @var integer
-     */
-    public int $status = HttpStatus::OK;
-
-    /**
-     * Gets or sets the body content of the response, as a stream.
-     *
-     * @var ReadableStream
-     */
-    private ReadableStream $body;
-
     /**
      * Callback to be invoked after the upgraded response has been written.
      *
@@ -34,111 +25,46 @@ class Response extends HttpMessage
      */
     private ?\Closure $onUpgrade = null;
 
-    public function __construct(
-        int $status = HttpStatus::OK,
-        ?HttpHeaderBag $headers = null,
-        null|ReadableStream|string $body = null,
-        ?int $contentLength = null,
-        string $protocol = "1.1",
-    ) {
-        parent::__construct($headers, $contentLength, $protocol);
-
-        $this->status = $status;
-        $this->body = new ReadableBuffer();
-
-        if ($body !== null) {
-            $this->setContent($body);
-        }
-    }
-
-    /**
-     * Creates a new `Response` instance with the given content and status code.
-     *
-     * @param null|ReadableStream|string    $body
-     * @param int                           $status
-     *
-     * @return Response
-     */
-    public static function new(null|ReadableStream|string $body = null, $status = HttpStatus::OK): Response
-    {
-        $response = new Response($status);
-        if ($body !== null) {
-            $response->setContent($body);
-        }
-
-        return $response;
-    }
-
-    /**
-     * Creates a new `Response` instance to redirect to another url.
-     *
-     * @param string    $url
-     * @param int       $status
-     *
-     * @return Response
-     */
-    public static function redirect(string $url, int $status = HttpStatus::TEMPORARY_REDIRECT): Response
-    {
-        $response = new Response($status);
-        $response->headers->set('Location', $url);
-
-        return $response;
-    }
-
     /**
      * Creates a new `Response` instance with JSON content.
      *
      * @param mixed     $content
      *
-     * @return Response
+     * @return static
      */
-    public static function json(mixed $content): Response
+    public static function json(mixed $content): static
     {
-        $response = new Response();
+        $response = self::new();
 
         $content = match (true) {
-            $content instanceof JsonSerializable => json_encode($content->jsonSerialize()),
+            $content instanceof \JsonSerializable => json_encode($content->jsonSerialize()),
             $content instanceof \Serializable => $content->serialize(),
             $content instanceof Arrayable => json_encode($content->toArray()),
             default => json_encode($content),
         };
 
+        // @phpstan-ignore return.type
         return $response
             ->setContentType(ContentType::JSON)
-            ->setContent($content);
+            ->setBody($content);
     }
 
     /**
-     * Creates a new `Response` instance with HTML content.
+     * Creates a new `Response` instance with streaming response content.
      *
-     * @param string    $content
+     * @param StreamGenerator       $generator      Callable for printing chunks of the response.
+     * @param int                   $status         Defines the status code of the response.
+     * @param array<string,string>  $headers        Defines the headers to send along with the response.
      *
-     * @return Response
+     * @return StreamingResponse
      */
-    public static function html(string $content): Response
+    public static function stream(callable $generator, int $status = Status::OK, array $headers = []): StreamingResponse
     {
-        $response = new Response();
-
-        return $response
-            ->setContentType(ContentType::HTML)
-            ->setContent($content);
-    }
-
-    /**
-     * Creates a new `Response` instance with text content.
-     *
-     * @param string    $content
-     * @param string    $contentType
-     *
-     * @return Response
-     */
-    public static function text(string $content, string $contentType = ContentType::TXT): Response
-    {
-        $response = new Response();
-
-        return $response
-            ->setContentType($contentType)
-            ->setContent($content);
+        return new StreamingResponse(
+            $generator(),
+            $status,
+            HeaderBag::parseArray($headers)
+        );
     }
 
     /**
@@ -147,9 +73,9 @@ class Response extends HttpMessage
      * @param string                    $alias      Defines the alias of the view to render.
      * @param array<array-key,mixed>    $data       Defines data attributes to pass to the view.
      *
-     * @return Response
+     * @return static
      */
-    public static function render(string $alias, array $data = []): Response
+    public static function render(string $alias, array $data = []): static
     {
         $extension = match (request()->format) {
             ContentType::JSON => ".json.php",
@@ -176,21 +102,22 @@ class Response extends HttpMessage
                     $data = reset($data);
                 }
 
-                return Response::json($data);
+                return self::json($data);
             }
 
             // Attempt to find a view which has the same alias, but a different extension.
             $view = View::findFallback($alias, $data);
             if ($view === null) {
+                // @phpstan-ignore return.type
                 return new NotFound();
             }
         }
 
         if (str_ends_with($view->path, '.json.php')) {
-            return Response::json($view->require());
+            return self::json($view->require());
         }
 
-        return Response::html($view->render());
+        return self::html($view->render());
     }
 
     /**
@@ -204,57 +131,11 @@ class Response extends HttpMessage
     {
         return new Response(
             status: $response->getStatusCode(),
-            headers: HttpHeaderBag::parseArray($response->getHeaders()),
+            headers: HeaderBag::parseArray($response->getHeaders()),
             body: $response->getBody(),
             contentLength: $response->getBody()->getSize(),
             protocol: $response->getProtocolVersion(),
         );
-    }
-
-    /**
-     * Sets the `Content-Type` header on the response.
-     *
-     * @param string    $type
-     *
-     * @return self
-     */
-    public function setContentType(string $type): self
-    {
-        $this->headers->set(ContentType::Header, $type);
-        return $this;
-    }
-
-    /**
-     * Gets the content body of the response.
-     *
-     * @return ReadableStream
-     */
-    public function content(): ReadableStream
-    {
-        return $this->body;
-    }
-
-    /**
-     * Sets the content body of the response.
-     *
-     * @param ReadableStream|string $body
-     *
-     * @return self
-     */
-    public function setContent(ReadableStream|string $body): self
-    {
-        if ($body instanceof ReadableStream) {
-            $this->body = $body;
-            $this->headers->remove("content-length");
-
-            return $this;
-        }
-
-        $this->body = new ReadableBuffer($body);
-        $this->headers->set("content-length", (string) \strlen($body));
-        $this->contentLength = \strlen($body);
-
-        return $this;
     }
 
     /**
@@ -278,15 +159,5 @@ class Response extends HttpMessage
     public function getUpgradeHandler(): ?\Closure
     {
         return $this->onUpgrade;
-    }
-
-    /**
-     * Gets whether the response is successful (i.e. status code is 200-299).
-     *
-     * @return bool
-     */
-    public function isSuccessful(): bool
-    {
-        return $this->status >= HttpStatus::OK && $this->status < HttpStatus::MULTIPLE_CHOICES;
     }
 }

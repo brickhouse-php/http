@@ -23,7 +23,7 @@
         "amphp/socket": "^2.3",
         "brickhouse/channel": "dev-main",
         "brickhouse/core": "dev-main",
-        "laminas/laminas-diactoros": "^3.5",
+        "brickhouse/http-transport": "dev-main",
         "guzzlehttp/guzzle": "^7.9"
     },
     "autoload": {

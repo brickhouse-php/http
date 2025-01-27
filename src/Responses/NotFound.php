@@ -14,7 +14,7 @@ final class NotFound extends Response
         $this->status = HttpStatus::NOT_FOUND;
 
         if ($body) {
-            $this->setContent($body);
+            $this->setBody($body);
         }
     }
 }

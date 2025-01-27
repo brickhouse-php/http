@@ -2,8 +2,9 @@
 
 namespace Brickhouse\Http;
 
+use Brickhouse\Http\Transport\ContentType;
+use Brickhouse\Http\Transport\Uri;
 use GuzzleHttp\RequestOptions;
-use League\Uri\Uri;
 
 class HttpClient
 {
@@ -139,7 +140,6 @@ class HttpClient
         );
 
         $this->pendingRequest->setUri(
-            // @phpstan-ignore argument.type
             $this->pendingRequest->uri()->withQuery($queryString)
         );
 
@@ -156,7 +156,6 @@ class HttpClient
     public function fragment(string $fragment): self
     {
         $this->pendingRequest->setUri(
-            // @phpstan-ignore argument.type
             $this->pendingRequest->uri()->withFragment($fragment)
         );
 
@@ -192,7 +191,7 @@ class HttpClient
     public function get(string $uri, array $queryParameters = []): Response
     {
         $this->pendingRequest->setMethod("GET");
-        $this->pendingRequest->setUri(Uri::fromBaseUri($uri));
+        $this->pendingRequest->setUri(Uri::new($uri));
 
         $this->query($queryParameters);
 
@@ -210,7 +209,7 @@ class HttpClient
     public function post(null|string $uri, null|array $data = null): Response
     {
         $this->pendingRequest->setMethod("POST");
-        $this->pendingRequest->setUri(Uri::fromBaseUri($uri));
+        $this->pendingRequest->setUri(Uri::new($uri));
 
         if ($data !== null) {
             $this->body(json_encode($data), ContentType::JSON);
@@ -229,7 +228,7 @@ class HttpClient
     public function patch(null|string $uri): Response
     {
         $this->pendingRequest->setMethod("PATCH");
-        $this->pendingRequest->setUri(Uri::fromBaseUri($uri));
+        $this->pendingRequest->setUri(Uri::new($uri));
 
         return $this->send($this->pendingRequest);
     }
@@ -244,7 +243,7 @@ class HttpClient
     public function put(null|string $uri): Response
     {
         $this->pendingRequest->setMethod("PUT");
-        $this->pendingRequest->setUri(Uri::fromBaseUri($uri));
+        $this->pendingRequest->setUri(Uri::new($uri));
 
         return $this->send($this->pendingRequest);
     }
@@ -259,7 +258,7 @@ class HttpClient
     public function delete(null|string $uri): Response
     {
         $this->pendingRequest->setMethod("DELETE");
-        $this->pendingRequest->setUri(Uri::fromBaseUri($uri));
+        $this->pendingRequest->setUri(Uri::new($uri));
 
         return $this->send($this->pendingRequest);
     }
@@ -274,7 +273,7 @@ class HttpClient
     public function head(null|string $uri): Response
     {
         $this->pendingRequest->setMethod("HEAD");
-        $this->pendingRequest->setUri(Uri::fromBaseUri($uri));
+        $this->pendingRequest->setUri(Uri::new($uri));
 
         return $this->send($this->pendingRequest);
     }
@@ -289,7 +288,7 @@ class HttpClient
     public function options(null|string $uri): Response
     {
         $this->pendingRequest->setMethod("OPTIONS");
-        $this->pendingRequest->setUri(Uri::fromBaseUri($uri));
+        $this->pendingRequest->setUri(Uri::new($uri));
 
         return $this->send($this->pendingRequest);
     }
@@ -304,7 +303,7 @@ class HttpClient
      */
     public function call(string $method, string $uri): Response
     {
-        $request = new Request($method, Uri::fromBaseUri($uri));
+        $request = new Request($method, Uri::new($uri));
 
         return $this->send($request);
     }
@@ -324,8 +323,8 @@ class HttpClient
         }
 
         $body = '';
-        while (($chunk = $request->content()->read()) !== null) {
-            $body .= $chunk;
+        while (!$request->body->eof()) {
+            $body .= $request->body->read(1024);
         }
 
         $client = new \GuzzleHttp\Client([
@@ -334,11 +333,11 @@ class HttpClient
 
         $guzzleResponse = $client->request(
             $request->method(),
-            $request->uri()->toString(),
+            $request->uri()->__toString(),
             [
                 RequestOptions::HEADERS => $request->headers->all(),
                 RequestOptions::BODY => $body,
-                RequestOptions::VERSION => $request->protocol(),
+                RequestOptions::VERSION => $request->getProtocolVersion(),
                 RequestOptions::SYNCHRONOUS => true,
             ]
         );

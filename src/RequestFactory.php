@@ -2,7 +2,7 @@
 
 namespace Brickhouse\Http;
 
-use Laminas\Diactoros\ServerRequestFactory;
+use Brickhouse\Http\Transport\ServerRequestFactory;
 
 final readonly class RequestFactory
 {
@@ -13,8 +13,15 @@ final readonly class RequestFactory
      */
     public function create(): Request
     {
-        return Request::psr7(
-            ServerRequestFactory::fromGlobals()
+        $request = new ServerRequestFactory()->fromGlobals();
+
+        return new Request(
+            $request->getMethod(),
+            $request->uri(),
+            $request->headers,
+            $request->getBody(),
+            $request->getBody()->getSize(),
+            $request->getProtocolVersion(),
         );
     }
 }

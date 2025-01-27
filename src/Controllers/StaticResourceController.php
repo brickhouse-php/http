@@ -2,10 +2,10 @@
 
 namespace Brickhouse\Http\Controllers;
 
-use Brickhouse\Http\ContentType;
 use Brickhouse\Http\Controller;
 use Brickhouse\Http\HttpStatus;
 use Brickhouse\Http\Response;
+use Brickhouse\Http\Transport\ContentType;
 
 class StaticResourceController extends Controller
 {
