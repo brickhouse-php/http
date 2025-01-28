@@ -139,6 +139,20 @@ class Response extends \Brickhouse\Http\Transport\Response
     }
 
     /**
+     * Sends the response to the output buffer.
+     *
+     * @return void
+     */
+    public function send(bool $flush = true): void
+    {
+        parent::send($flush);
+
+        if (($handler = $this->getUpgradeHandler()) !== null) {
+            $handler();
+        }
+    }
+
+    /**
      * Sets the callback to be invoked once the response is sent back to the client.
      *
      * @param \Closure(): void  $onUpgrade

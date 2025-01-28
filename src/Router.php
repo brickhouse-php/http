@@ -136,8 +136,8 @@ class Router
             $additionalMiddleware = array_map(
                 fn(string|HttpMiddleware $middleware) => when(
                     is_string($middleware),
-                    resolve($middleware),
-                    $middleware
+                    fn() => resolve($middleware),
+                    fn() => $middleware
                 ),
                 $match[0]->middleware
             );

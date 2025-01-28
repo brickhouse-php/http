@@ -52,6 +52,6 @@ class RouteScope
      */
     public function __invoke()
     {
-        ($this->callback)();
+        ($this->callback)($this);
     }
 }

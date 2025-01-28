@@ -12,7 +12,7 @@ trait UsesHttpMiddleware
     /**
      * Gets all the global middleware.
      *
-     * @var array<int,class-string<HttpMiddleware>>
+     * @var array<int,HttpMiddleware>
      */
     protected array $middleware = [];
 
@@ -26,6 +26,7 @@ trait UsesHttpMiddleware
     protected function addMiddleware(string|array $middleware): void
     {
         $middleware = array_wrap($middleware);
+        $middleware = array_map('resolve', $middleware);
 
         $this->middleware = [...$this->middleware, ...$middleware];
     }

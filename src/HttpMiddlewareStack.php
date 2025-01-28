@@ -7,7 +7,7 @@ final readonly class HttpMiddlewareStack
     /**
      * Undocumented function
      *
-     * @param array<int,class-string<HttpMiddleware>> $middleware
+     * @param array<int,HttpMiddleware>     $middleware
      */
     public function __construct(
         private readonly array $middleware
@@ -23,13 +23,11 @@ final readonly class HttpMiddlewareStack
      */
     public function __invoke(\Closure $respond, Request $request): Response
     {
-        $middleware = [...$this->middleware];
+        $middlewares = [...$this->middleware];
         $next = new HttpMiddlewareDelegate($respond);
 
-        while ($middlewareClass = array_pop($middleware)) {
-            $next = new HttpMiddlewareDelegate(function (Request $request) use ($middlewareClass, $next) {
-                $middleware = resolve($middlewareClass);
-
+        while ($middleware = array_pop($middlewares)) {
+            $next = new HttpMiddlewareDelegate(function (Request $request) use ($middleware, $next) {
                 return $middleware($request, $next);
             });
         }

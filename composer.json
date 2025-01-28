@@ -20,7 +20,6 @@
     ],
     "require": {
         "php": "^8.4",
-        "amphp/socket": "^2.3",
         "brickhouse/channel": "dev-main",
         "brickhouse/core": "dev-main",
         "brickhouse/http-transport": "dev-main",
