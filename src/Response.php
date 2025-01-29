@@ -2,13 +2,10 @@
 
 namespace Brickhouse\Http;
 
-use Brickhouse\Http\Responses\NotFound;
 use Brickhouse\Http\Transport\ContentType;
 use Brickhouse\Http\Transport\HeaderBag;
 use Brickhouse\Http\Transport\Status;
 use Brickhouse\Support\Arrayable;
-use Brickhouse\View\Engine\Exceptions\ViewNotFoundException;
-use Brickhouse\View\View;
 use Psr\Http\Message\ResponseInterface;
 
 /**
@@ -65,59 +62,6 @@ class Response extends \Brickhouse\Http\Transport\Response
             $status,
             HeaderBag::parseArray($headers)
         );
-    }
-
-    /**
-     * Creates a new `Response`-object which contains the rendered view, `$alias`, depending on the request view format.
-     *
-     * @param string                    $alias      Defines the alias of the view to render.
-     * @param array<array-key,mixed>    $data       Defines data attributes to pass to the view.
-     *
-     * @return static
-     */
-    public static function render(string $alias, array $data = []): static
-    {
-        $extension = match (request()->format) {
-            ContentType::JSON => ".json.php",
-            ContentType::HTML => ".html.php",
-            default => ".html.php"
-        };
-
-        $viewPath = $alias;
-
-        // If no extension was given in the view path, attempt to guess the correct one.
-        if (trim(pathinfo($alias, PATHINFO_EXTENSION)) === '') {
-            $viewPath .= $extension;
-        }
-
-        try {
-            $view = view($viewPath, $data);
-        } catch (ViewNotFoundException) {
-            // If no explicit view was found for a JSON request, we can implicitly
-            // send the given data back as formatted JSON without needing a view.
-            if (request()->format === ContentType::JSON) {
-                // If the data array is indexed and only contains a single item,
-                // unwrap it and set that back in the JSON response.
-                if (array_is_list($data) && count($data) === 1) {
-                    $data = reset($data);
-                }
-
-                return self::json($data);
-            }
-
-            // Attempt to find a view which has the same alias, but a different extension.
-            $view = View::findFallback($alias, $data);
-            if ($view === null) {
-                // @phpstan-ignore return.type
-                return new NotFound();
-            }
-        }
-
-        if (str_ends_with($view->path, '.json.php')) {
-            return self::json($view->require());
-        }
-
-        return self::html($view->render());
     }
 
     /**

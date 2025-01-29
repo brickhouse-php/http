@@ -58,18 +58,3 @@ if (!function_exists("text")) {
         return Response::text($content, $contentType);
     }
 }
-
-if (!function_exists("render")) {
-    /**
-     * Creates a new `Response`-object which contains the rendered view, `$view`, depending on the request view format.
-     *
-     * @param string                    $view       Defines the alias of the view to render.
-     * @param array<array-key,mixed>    $data       Defines data attributes to pass to the view.
-     *
-     * @return Response
-     */
-    function render(string $view, array $data = []): Response
-    {
-        return Response::render($view, $data);
-    }
-}
