@@ -1,46 +1,65 @@
 {
-    "name": "brickhouse/http",
-    "description": "HTTP routing and logic for Brickhouse",
-    "license": "MIT",
-    "keywords": ["framework", "brickhouse", "mvc"],
-    "homepage": "https://github.com/brickhouse-php/brickhouse",
-    "support": {
-        "issues": "https://github.com/brickhouse-php/brickhouse/issues",
-        "source": "https://github.com/brickhouse-php/brickhouse"
-    },
-    "minimum-stability": "dev",
-    "prefer-stable": true,
-    "authors": [
-        {
-            "name": "Max T. Kristiansen",
-            "email": "me@maxtrier.dk",
-            "role": "Author",
-            "homepage": "https://maxtrier.dk"
-        }
-    ],
-    "require": {
-        "php": "^8.4",
-        "brickhouse/channel": "dev-main",
-        "brickhouse/core": "dev-main",
-        "brickhouse/http-transport": "dev-main",
-        "guzzlehttp/guzzle": "^7.9"
-    },
-    "autoload": {
-        "psr-4": {
-            "Brickhouse\\Http\\": "src"
-        },
-        "classmap": [
-            "src/"
-        ],
-        "files": [
-            "src/helpers.php"
-        ]
-    },
-    "extra": {
-        "brickhouse": {
-            "extensions": [
-                "\\Brickhouse\\Http\\Extension"
-            ]
-        }
+  "name": "brickhouse/http",
+  "description": "HTTP routing and logic for Brickhouse",
+  "license": "MIT",
+  "keywords": [
+    "framework",
+    "brickhouse",
+    "mvc"
+  ],
+  "homepage": "https://github.com/brickhouse-php/brickhouse",
+  "support": {
+    "issues": "https://github.com/brickhouse-php/brickhouse/issues",
+    "source": "https://github.com/brickhouse-php/brickhouse"
+  },
+  "minimum-stability": "dev",
+  "prefer-stable": true,
+  "authors": [
+    {
+      "name": "Max T. Kristiansen",
+      "email": "me@maxtrier.dk",
+      "role": "Author",
+      "homepage": "https://maxtrier.dk"
     }
+  ],
+  "require": {
+    "php": "^8.4",
+    "brickhouse/core": "dev-main",
+    "brickhouse/routing": "dev-main",
+    "brickhouse/http-transport": "dev-main",
+    "guzzlehttp/guzzle": "^7.9"
+  },
+  "require-dev": {
+    "brickhouse/testing": "dev-main",
+    "pestphp/pest": "^3.7",
+    "phpstan/phpstan": "^2.0"
+  },
+  "autoload": {
+    "psr-4": {
+      "Brickhouse\\Http\\": "src"
+    },
+    "classmap": [
+      "src/"
+    ],
+    "files": [
+      "src/helpers.php"
+    ]
+  },
+  "autoload-dev": {
+    "psr-4": {
+      "Brickhouse\\Http\\Tests\\": "tests"
+    }
+  },
+  "extra": {
+    "brickhouse": {
+      "extensions": [
+        "\\Brickhouse\\Http\\Extension"
+      ]
+    }
+  },
+  "config": {
+    "allow-plugins": {
+      "pestphp/pest-plugin": true
+    }
+  }
 }

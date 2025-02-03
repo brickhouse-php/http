@@ -2,6 +2,7 @@
 
 namespace Brickhouse\Http;
 
+use Brickhouse\Http\Responses\NotFound;
 use Brickhouse\Http\Transport\ContentType;
 use Brickhouse\Http\Transport\HeaderBag;
 use Brickhouse\Http\Transport\Status;
@@ -44,6 +45,40 @@ class Response extends \Brickhouse\Http\Transport\Response
         return $response
             ->setContentType(ContentType::JSON)
             ->setBody($content);
+    }
+
+    /**
+     * Creates a new `Response` instance with JSON content.
+     *
+     * @param string                $path           Path to the file.
+     * @param null|string           $contentType    Content type of the file.
+     * @param array<string,string>  $headers        Headers to pass along to the response.
+     *
+     * @return static
+     */
+    public static function file(string $path, null|string $contentType = null, array $headers = []): static
+    {
+        $response = self::new();
+
+        if ($contentType === null) {
+            // Attempt to detect the content type of the file. If not successful, assume it's a binary file.
+            $contentType = @mime_content_type($path) ?: ContentType::BIN;
+        }
+
+        // Attempt to get the absolute path to the file.
+        // Note: `realpath` will return `false` if the file doesn't exist.
+        $absoluteFilePath = @realpath($path) ?: base_path($path);
+
+        $fileContent = @file_get_contents($absoluteFilePath);
+        if ($fileContent === false) {
+            throw new NotFound();
+        }
+
+        // @phpstan-ignore return.type
+        return $response
+            ->setContentType($contentType)
+            ->setBody($fileContent)
+            ->withHeaders($headers);
     }
 
     /**
