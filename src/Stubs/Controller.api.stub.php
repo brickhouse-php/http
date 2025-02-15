@@ -1,12 +1,12 @@
 <?php
 
-namespace NamespacePlaceholder;
+namespace {{controllerNamespace}};
 
-use RootNamespacePlaceholder\Models\ModelNamePlaceholder;
+use App\Models\{{modelClass}};
 use Brickhouse\Http\Controller;
 use Brickhouse\Http\Response;
 
-final class ClassNamePlaceholder extends Controller
+final class {{controllerClass}} extends Controller
 {
     /**
      * Renders a list of all items of the given resource type.
@@ -15,8 +15,8 @@ final class ClassNamePlaceholder extends Controller
      */
     public function index(): Response
     {
-        return render('ModelNamePlaceholderLowercase/index', [
-            'items' => ModelNamePlaceholder::all()
+        return render('{{#lower modelClass}}/index', [
+            'items' => {{modelClass}}::all()
         ]);
     }
 
@@ -27,8 +27,8 @@ final class ClassNamePlaceholder extends Controller
      */
     public function create(): Response
     {
-        return render('ModelNamePlaceholderLowercase/create', [
-            'item' => ModelNamePlaceholder::create($this->request->all())
+        return render('{{#lower modelClass}}/create', [
+            'item' => {{modelClass}}::create($this->request->all())
         ]);
     }
 
@@ -41,8 +41,8 @@ final class ClassNamePlaceholder extends Controller
      */
     public function show(string $id): Response
     {
-        return render('ModelNamePlaceholderLowercase/show', [
-            'item' => ModelNamePlaceholder::find($id)
+        return render('{{#lower modelClass}}/show', [
+            'item' => {{modelClass}}::find($id)
         ]);
     }
 
@@ -55,8 +55,8 @@ final class ClassNamePlaceholder extends Controller
      */
     public function update(string $id): Response
     {
-        return render('ModelNamePlaceholderLowercase/update', [
-            'item' => ModelNamePlaceholder::find($id)?->save($this->request->all())
+        return render('{{#lower modelClass}}/update', [
+            'item' => {{modelClass}}::find($id)?->save($this->request->all())
         ]);
     }
 
@@ -69,8 +69,8 @@ final class ClassNamePlaceholder extends Controller
      */
     public function destroy(string $id): Response
     {
-        return render('ModelNamePlaceholderLowercase/destroy', [
-            'item' => ModelNamePlaceholder::find($id)?->delete()
+        return render('{{#lower modelClass}}/destroy', [
+            'item' => {{modelClass}}::find($id)?->delete()
         ]);
     }
 }

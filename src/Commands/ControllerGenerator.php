@@ -2,6 +2,7 @@
 
 namespace Brickhouse\Http\Commands;
 
+use Brickhouse\Console\Attributes\Argument;
 use Brickhouse\Console\Attributes\Option;
 use Brickhouse\Console\GeneratorCommand;
 use Brickhouse\Console\InputOption;
@@ -10,13 +11,6 @@ use Brickhouse\Support\StringHelper;
 
 class ControllerGenerator extends GeneratorCommand
 {
-    /**
-     * The type of the class generated.
-     *
-     * @var string
-     */
-    public string $type = 'Controller';
-
     /**
      * The name of the console command.
      *
@@ -30,6 +24,14 @@ class ControllerGenerator extends GeneratorCommand
      * @var string
      */
     public string $description = 'Scaffolds a new controller.';
+
+    /**
+     * Defines the name of the generated controller.
+     *
+     * @var string
+     */
+    #[Argument("name", "Specifies the name of the controller", InputOption::REQUIRED)]
+    public string $controllerName = '';
 
     /**
      * Defines whether to add API controllers.
@@ -68,13 +70,9 @@ class ControllerGenerator extends GeneratorCommand
     /**
      * @inheritDoc
      */
-    public function stub(): string
+    protected function sourceRoot(): string
     {
-        if ($this->isApiController()) {
-            return __DIR__ . '/../Stubs/Controller.api.stub.php';
-        }
-
-        return __DIR__ . '/../Stubs/Controller.stub.php';
+        return __DIR__ . '/../Stubs/';
     }
 
     /**
@@ -82,46 +80,28 @@ class ControllerGenerator extends GeneratorCommand
      */
     public function handle(): int
     {
-        $result = parent::handle();
+        $this->controllerName = StringHelper::from($this->controllerName)
+            ->end('Controller')
+            ->__toString();
+
+        $stub = $this->isApiController()
+            ? 'Controller.api.stub.php'
+            : 'Controller.stub.php';
+
+        $this->copy(
+            $stub,
+            path('src', 'Controllers', $this->controllerName . '.php'),
+            [
+                'controllerNamespace' => 'App\\Controllers',
+                'controllerClass' => $this->controllerName,
+                'modelClass' => $this->getBaseName(),
+            ]
+        );
 
         $this->createModel();
         $this->createViews();
 
-        return $result;
-    }
-
-    /**
-     * @inheritDoc
-     */
-    protected function defaultNamespace(string $rootNamespace): string
-    {
-        return $rootNamespace . 'Controllers';
-    }
-
-    /**
-     * @inheritDoc
-     */
-    protected function getClass(string $name): string
-    {
-        return StringHelper::from($name)->end("Controller");
-    }
-
-    /**
-     * @inheritDoc
-     */
-    protected function buildStub(string $path, string $name): string
-    {
-        $content = parent::buildStub($path, $name);
-
-        $modelName = StringHelper::from($name)->removeEnd("Controller");
-
-        $content = str_replace(
-            ["ModelNamePlaceholderLowercase", "ModelNamePlaceholder"],
-            [strtolower($modelName), $modelName],
-            $content
-        );
-
-        return $content;
+        return 0;
     }
 
     /**
@@ -136,9 +116,7 @@ class ControllerGenerator extends GeneratorCommand
         }
 
         $this->call('generate:model', [
-            'name' => StringHelper::from($this->className)
-                ->removeEnd("Controller")
-                ->__toString(),
+            'name' => $this->getBaseName(),
             $this->force ? '--force' : '--no-force'
         ]);
     }
@@ -154,11 +132,7 @@ class ControllerGenerator extends GeneratorCommand
             return;
         }
 
-        $path = StringHelper::from($this->className)
-            ->removeEnd("Controller")
-            ->lower()
-            ->__toString();
-
+        $path = $this->getBaseName();
         $force = $this->force ? '--force' : '--no-force';
 
         $this->call('generate:view', ['name' => path($path, 'index'), $force]);
@@ -171,5 +145,17 @@ class ControllerGenerator extends GeneratorCommand
             $this->call('generate:view', ['name' => path($path, 'new'), $force]);
             $this->call('generate:view', ['name' => path($path, 'edit'), $force]);
         }
+    }
+
+    /**
+     * Defines the base name for the controller.
+     *
+     * @return string
+     */
+    protected function getBaseName(): string
+    {
+        return StringHelper::from($this->controllerName)
+            ->removeEnd("Controller")
+            ->__toString();
     }
 }
